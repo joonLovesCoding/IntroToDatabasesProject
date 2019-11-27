@@ -1,2 +1,0 @@
-Joon - Add comments (Add a comment relation), like photo (Add a like relation)
-Alexis - Unfollow, search by poster
