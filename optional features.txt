@@ -1,0 +1,6 @@
+Joon (yh2141) -
+Add comments (include a new 'comment' relation)
+Search by poster
+Alexis (aju222) -
+Like photo
+Add Friendgroup
