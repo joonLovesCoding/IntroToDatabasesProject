@@ -1,6 +1,9 @@
 (SELECT photoID
  FROM Photo
- WHERE allFollowers = 1)
+ WHERE allFollowers = 1 AND photoPoster IN
+ 	(SELECT username_followed
+	 FROM Follow
+	 WHERE username_follower = 'TestUser' AND followstatus = 1))
 UNION
 (SELECT photoID
  FROM SharedWith
