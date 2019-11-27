@@ -1,0 +1,21 @@
+<html>
+<head>
+</head>
+<body>
+<form action="/post_action_group" method="POST">
+	Photo filepath: <input type="text" name="filepath" size=110 maxLength=100 value={{filepath}} required/> </br>
+	Caption </br>
+	<textarea name="caption" rows="5" cols="50" maxLength=100>{{caption}}</textarea> </br>
+	Share with:
+	<select name="Friendgroup">
+        <option selected="selected">Choose one</option>
+        {% for group in Friendgroups %}
+        	<option>{{group.groupName}}</option>
+        {% endfor %}
+	<input type="submit" value="Submit">
+	{% if error %}
+		<p class="error"><strong>Error:</strong> {{error}}</p>
+	{% endif %}
+</form>
+</body>
+</html>
