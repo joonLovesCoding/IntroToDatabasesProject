@@ -1,0 +1,10 @@
+(SELECT photoID
+ FROM Photo
+ WHERE allFollowers = 1)
+UNION
+(SELECT photoID
+ FROM SharedWith
+ WHERE groupName IN
+	(SELECT groupName
+	 FROM BelongTo
+	 WHERE member_username = 'TestUser'))
