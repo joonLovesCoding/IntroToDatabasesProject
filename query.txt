@@ -6,8 +6,8 @@
 	 WHERE username_follower = 'TestUser' AND followstatus = 1))
 UNION
 (SELECT photoID
- FROM SharedWith
- WHERE groupOwner, groupName IN
-	(SELECT groupOwner, groupName
+ FROM SharedWith as s
+ WHERE groupName IN
+	(SELECT groupName
 	 FROM BelongTo
-	 WHERE member_username = 'TestUser'))
+	 WHERE member_username = 'TestUser' AND owner_username = s.groupOwner))
