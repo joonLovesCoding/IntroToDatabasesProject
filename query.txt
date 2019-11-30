@@ -7,7 +7,7 @@
 UNION
 (SELECT photoID
  FROM SharedWith
- WHERE groupName IN
-	(SELECT groupName
+ WHERE groupOwner, groupName IN
+	(SELECT groupOwner, groupName
 	 FROM BelongTo
 	 WHERE member_username = 'TestUser'))
