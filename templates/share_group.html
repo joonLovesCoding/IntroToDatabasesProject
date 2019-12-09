@@ -1,0 +1,30 @@
+<html>
+	<head>
+		<title>Finstagram</title>
+	</head>
+	<body>
+		<h1>Share to a friend group</h1>
+		<div>
+			<form action="/share_group" method="POST">
+				Filepath: <input type="text" name="filepath" size=110 maxLength=100 value={{filepath}} required/>
+				<br><br>
+				Caption:
+				<br>
+				<textarea name="caption" rows="5" cols="50" maxLength=100>{{caption}}</textarea>
+				<br><br>
+				Share with:
+				<select name="Friendgroup">
+			        <option selected="selected">Choose one</option>
+			        {% for group in Friendgroups %}
+			        	<option>{{group.groupName}}</option>
+			        {% endfor %}
+			    <br>
+				<input type="submit" value="Submit">
+			</form>
+			<a href="/">Back to home</a>
+			{% if error %}
+				<p class="error"><strong>Error:</strong> {{error}}</p>
+			{% endif %}
+		</div>
+	</body>
+</html>

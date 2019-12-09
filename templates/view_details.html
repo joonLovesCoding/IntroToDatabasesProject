@@ -1,0 +1,43 @@
+<html>
+    <head>
+        <title>Finstagram</title>
+        <style>
+        	input.hidden[type="radio"]{visibility:hidden;}
+    	</style>
+    </head>
+    <body>
+        <h1>Image details</h1>
+        <div>
+        	<img src="/photo_view/{{photo.filepath}}" width=300>
+			<br>
+			photoID: {{photo.photoID}}
+			<br>
+        	Poster: {{photo.photoPoster}} ({{photo.firstname}} {{photo.lastname}})
+        	<br>
+        	Posting date: {{photo.postingdate}}
+        	<br><br>
+        	Comments:
+        	<br>
+        	{% for comment in comments %}
+        		{{comment.username}}: {{comment.comment_text}}
+        		<br>
+        	{% endfor %}
+        	<br>
+        	Tagged:
+        	<br>
+        	{% for tag in tags %}
+        		{{tag.username}} ({{tag.firstname}} {{tag.lastname}})
+        		<br>
+        	{% endfor %}
+        	<br>
+        	<form action="/add_comment" method="POST">
+        		<textarea name="comment_text" rows="5" cols="50" maxLength=100>Leave a comment (Max 100 characters)</textarea>
+        		<br>
+        		<input class="hidden" type="radio" value={{photo.photoID}} checked/>
+        		<br>
+        		<input type="submit" value="Comment">
+        	</form>
+        	<a href="/">Back to home</a>
+        </div>
+    </body>
+</html>

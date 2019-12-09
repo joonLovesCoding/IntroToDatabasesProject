@@ -1,0 +1,21 @@
+<html>
+	<head>
+		<title>Finstagram</title>
+	</head>
+	<body>
+		<h1>Accept follow requests</h1>
+		<div>
+			<form action="/follow_requests_action" method="POST">
+				<input type="checkbox" name="username_follower" value=""> Blank
+				<br>
+			    {% for request in requests %}
+			        <input type="checkbox" name="username_follower" value={{request.username_follower}}> {{request.username_follower}}
+			        <br>
+			    {% endfor %}
+			    <br>
+				<input type="submit" value="Submit">
+			</form>
+			<a href="/">Back to home</a>
+		</div>
+	</body>
+</html>

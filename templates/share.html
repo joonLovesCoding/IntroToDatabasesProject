@@ -1,0 +1,27 @@
+<html>
+	<head>
+		<title>Finstagram</title>
+	</head>
+	<body>
+		<h1>Share a photo</h1>
+		<div>
+			<form action="/share_action" method="POST">
+				Filepath: <input type="text" name="filepath" size=110 maxLength=100 required/>
+				<br><br>
+				Share to all followers?
+				Yes <input type="radio" name="allFollowers" value=1 checked="checked">
+				No <input type="radio" name="allFollowers" value=0>
+				<br><br>
+				Caption:
+				<br>
+				<textarea name="caption" rows="5" cols="50" maxLength=100>Caption (max length 100 characters)</textarea>
+				<br><br>
+				<input type="submit" value="Share">
+			</form>
+			<a href="/">Back to home</a>
+			{% if error %}
+				<p class="error"><strong>Error:</strong> {{error}}</p>
+			{% endif %}
+		</div>
+	</body>
+</html>

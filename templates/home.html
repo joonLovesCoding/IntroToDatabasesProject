@@ -1,0 +1,22 @@
+<html>
+	<head>
+		<title>Finstagram</title>
+	</head>
+	<body>
+		<h1>Welcome, {{username}}!</h1>
+		<div>
+			<a href="/share">Share a photo</a>
+			<br>
+			<a href="/view">View photos</a>
+			<br>
+			<a href="/search_by_user">Search photos by user</a>
+			<br>
+			<a href="/follow_user">Follow a user</a>
+			<br>
+			<a href="/follow_requests">Follow requests</a>
+			{% if error %}
+				<p class="error"><strong>Error:</strong> {{error}}</p>
+			{% endif %}
+		</div>
+	</body>
+</html>

@@ -1,79 +1,308 @@
-# Part 3 benchmark assumptions:
-# There is already a user registered under the name AlreadyLoggedIn
-# AlreadyLoggedIn is the owner of a Friendgroup called SecretBudz
-
-from flask import Flask, render_template, request, session
-import pymysql.cursors
+from flask import Flask, render_template, request, session, send_file
 from datetime import datetime
-import sys
+import pymysql.cursors
+import os.path
+import hashlib
 
 app = Flask(__name__)
+app.secret_key = "Databases project part 4"
+SALT = "ProjectPart4"
 
-conn = pymysql.connect(host='localhost',
+conn = pymysql.connect(host="localhost",
                        port=3306,
-                       user='root',
-                       password='',
-                       db='project',
-                       charset='utf8mb4',
+                       user="root",
+                       password="",
+                       db="project",
+                       charset="utf8mb4",
                        cursorclass=pymysql.cursors.DictCursor)
 
 
 @app.route("/")
 def index():
-    session['username'] = 'AlreadyLoggedIn'
-    return render_template('index.html')
+    if "username" in session:
+        return render_template("home.html", username=session['username'])
+    return render_template("index.html")
 
 
-@app.route('/post')
-def post():
-    return render_template('post.html')
+@app.route("/register")
+def register():
+    return render_template("register.html")
 
 
-@app.route('/post_action', methods=['GET', 'POST'])
-def post_action():
-    filepath = request.form['filepath']
-    allFollowers = int(request.form['allFollowers'])
-    caption = request.form['caption']
-    photoPoster = session['username']
-    cursor = conn.cursor()
+@app.route("/registerAuth", methods=["POST"])
+def registerAuth():
+    if request.form:
+        formData = request.form
+        username = formData["username"]
+        password = formData["password"]
+        firstname = formData["firstname"]
+        lastname = formData["lastname"]
+        salt_pw = "project" + password
+        hash_pw = hashlib.sha256(salt_pw.encode("utf-8")).hexdigest()
+        bio = formData["bio"]
 
-    if allFollowers == 1:
-        postingdate = datetime.now()
-        cursor.execute('INSERT INTO Photo (postingdate, filepath, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s)',
-                       (postingdate, filepath, allFollowers, caption, photoPoster))
-        conn.commit()
-        cursor.close()
-        return render_template('post.html')
+        try:
+            with conn.cursor() as cursor:
+                query = "INSERT INTO Person VALUES (%s, %s, %s, %s, %s)"
+                cursor.execute(query, (username, hash_pw, firstname, lastname, bio))
+        except pymysql.err.IntegrityError:
+            error = "Username already taken"
+            return render_template("register.html", error=error)
+        return render_template("login.html")
     else:
-        cursor.execute('SELECT groupName FROM Friendgroup WHERE groupOwner = %s', (photoPoster))
-        result = cursor.fetchall()
-        cursor.close()
-        return render_template('post_action_group.html', filepath=filepath, caption=caption, Friendgroups=result)
+        error = "Unknown error"
+        return render_template("register.html", error=error)
 
 
-@app.route('/post_action_group', methods=['POST'])
+@app.route("/login")
+def login():
+    return render_template("login.html")
+
+
+@app.route("/loginAuth", methods=["POST"])
+def loginAuth():
+    if request.form:
+        formData = request.form
+        username = formData["username"]
+        password = formData["password"]
+        salt_pw = "project" + password
+        hash_pw = hashlib.sha256(salt_pw.encode("utf-8")).hexdigest()
+
+        with conn.cursor() as cursor:
+            query = "SELECT password FROM Person WHERE username = %s"
+            cursor.execute(query, (username))
+            query_result = cursor.fetchone()
+        if query_result:
+            sql_pw = query_result["password"]
+            if hash_pw == sql_pw:
+                session["username"] = username
+                return render_template("home.html", username=username)
+            else:
+                error = "Incorrect password"
+                return render_template("login.html", error=error)
+        else:
+            error = "Incorrect username"
+            return render_template("login.html", error=error)
+    else:
+        error = "Unknown error"
+        return render_template("login.html", error=error)
+
+# we added the attribute "photoBLOB" to the Photo relation
+@app.route("/share")
+def share():
+    return render_template("share.html")
+
+
+@app.route("/share_action", methods=["POST"])
+def share_action():
+    if request.form:
+        formData = request.form
+        filepath = formData["filepath"]
+        allFollowers = int(formData["allFollowers"])
+        caption = formData["caption"]
+        photoPoster = session["username"]
+
+        if allFollowers == 1:
+            postingdate = datetime.now()
+            with open(filepath, "rb") as f:
+                img_data = f.read()
+            with conn.cursor() as cursor:
+                query = "INSERT INTO Photo (postingdate, filepath, allFollowers, caption, photoPoster, photoBLOB) " \
+                        "VALUES (%s, %s, %s, %s, %s, %s)"
+                cursor.execute(query, (postingdate, filepath, allFollowers, caption, photoPoster, img_data))
+                conn.commit()
+            return render_template("share.html")
+        else:
+            with conn.cursor() as cursor:
+                query = "SELECT groupName FROM Friendgroup WHERE groupOwner = %s"
+                cursor.execute(query, (photoPoster))
+                query_result = cursor.fetchall()
+            return render_template("share_group.html", filepath=filepath, caption=caption, Friendgroups=query_result)
+    else:
+        error = "Unknown error"
+        return render_template("share.html", error=error)
+
+
+@app.route("/share_group", methods=["POST"])
 def post_action_group():
-    postingdate = datetime.now()
-    filepath = request.form['filepath']
-    allFollowers = 0
-    caption = request.form['caption']
-    photoPoster = session['username']
-    Friendgroup = request.form['Friendgroup']
-    cursor = conn.cursor()
+    formData = request.form
+    if formData:
+        postingdate = datetime.now()
+        filepath = formData["filepath"]
+        allFollowers = 0
+        caption = formData["caption"]
+        photoPoster = session["username"]
+        Friendgroup = formData["Friendgroup"]
 
-    # upload the photo
-    cursor.execute('INSERT INTO Photo (postingdate, filepath, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s)',
-                   (postingdate, filepath, allFollowers, caption, photoPoster))
-    # determine the AUTO_INCREMENT value
-    cursor.execute('SELECT photoID FROM Photo AS p WHERE photoID > ALL(SELECT photoID FROM Photo WHERE photoID != p.photoID)')
-    result = cursor.fetchone()
-    # share the photo
-    cursor.execute('INSERT INTO SharedWith VALUES (%s, %s, %s)', (photoPoster, Friendgroup, result['photoID']))
-    conn.commit()
-    cursor.close()
-    return render_template('post.html')
+        with open(filepath, "rb") as f:
+            data = f.read()
+        with conn.cursor() as cursor:
+            query = "INSERT INTO Photo (postingdate, filepath, allFollowers, caption, photoPoster, photoBLOB) " \
+                    "VALUES (%s, %s, %s, %s, %s, %s)"
+            cursor.execute(query, (postingdate, filepath, allFollowers, caption, photoPoster, data))
+            query = "SELECT photoID FROM Photo AS p WHERE photoID > " \
+                    "ALL(SELECT photoID FROM Photo WHERE photoID != p.photoID)"
+            cursor.execute(query)
+            query_result = cursor.fetchone()
+            query = "INSERT INTO SharedWith VALUES (%s, %s, %s)"
+            cursor.execute(query, (photoPoster, Friendgroup, query_result["photoID"]))
+            conn.commit()
+        return render_template("home.html")
+    else:
+        error = "Unknown error"
+        return render_template("share.html", error=error)
+
+# we assume the user viewing a photo is not the user who uploaded it and must download the data from the server as
+# a "temporary" file.
+@app.route("/view")
+def view():
+    username = session["username"]
+    with conn.cursor() as cursor:
+        query = "(SELECT photoID, postingdate, filepath, photoPoster, photoBLOB FROM Photo " \
+                "WHERE allFollowers = 1 AND photoPoster IN (SELECT username_followed " \
+                "FROM Follow WHERE username_follower = %s AND followstatus = 1)) " \
+                "UNION (SELECT photoID, postingdate, filepath, photoPoster, photoBLOB FROM SharedWith s " \
+                "NATURAL JOIN Photo p WHERE groupName IN (SELECT groupName FROM BelongTo " \
+                "WHERE member_username = %s AND owner_username = s.groupOwner)) ORDER BY postingdate DESC"
+        cursor.execute(query, (username, username))
+        query_result = cursor.fetchall()
+    for row in query_result:
+        filepath = row["filepath"]
+        photoBLOB = row["photoBLOB"]
+        with open(filepath, 'wb') as f:
+            f.write(photoBLOB)
+        # short-term fix for large data transfer
+        row["photoBLOB"] = 0
+    return render_template("view.html", photos=query_result)
 
 
-app.secret_key = "Databases project part 3"
+@app.route("/photo_view/<filename>", methods=["GET"])
+def photo_view(filename):
+    if os.path.isfile(filename):
+        return send_file(filename, mimetype="image/jpg")
+
+
+@app.route("/view_details", methods=["POST"])
+def view_details():
+    photoID = request.form["photoID"]
+    if photoID:
+        query = "SELECT photoID, postingdate, filepath, photoPoster, firstname, lastname FROM (Photo JOIN Person ON " \
+                "(Photo.photoPoster = Person.username)) WHERE photoID = %s"
+        with conn.cursor() as cursor:
+            cursor.execute(query, photoID)
+            query_result = cursor.fetchone()
+            query = "SELECT username, comment_text FROM Comment WHERE photoID = %s"
+            cursor.execute(query, photoID)
+            query_result1 = cursor.fetchall()
+            query = "SELECT username, firstname, lastname FROM Tagged NATURAL JOIN Person where photoID = %s " \
+                    "AND tagstatus = 1"
+            cursor.execute(query, photoID)
+            query_result2 = cursor.fetchall()
+        if not query_result1:
+            query_result1 = [{"username": "N/A", "comment_text": "N/A"}]
+        if not query_result2:
+            query_result2 = [{"username": "N/A", "firstname": "N/A", "lastname": "N/A"}]
+        return render_template("view_details.html", photo=query_result, comments=query_result1, tags=query_result2)
+    else:
+        error = "Unknown error"
+        return render_template("home.html", error=error)
+
+
+@app.route("/search_by_user")
+def search_by_user():
+    return render_template("search_by_user.html")
+
+
+@app.route("/search_by_user_action", methods=["POST"])
+def search_by_user_action():
+    their_username = request.form["username"]
+    if their_username:
+        my_username = session["username"]
+        query = "(SELECT photoID, postingdate, filepath, photoPoster, photoBLOB FROM Photo WHERE allFollowers = 1 " \
+                "AND photoPoster IN (SELECT username_followed FROM Follow WHERE username_follower = %s " \
+                "AND username_followed = %s AND followstatus = 1)) UNION " \
+                "(SELECT photoID, postingdate, filepath, photoPoster, photoBLOB FROM SharedWith NATURAL JOIN Photo " \
+                "WHERE groupName IN (SELECT groupName FROM BelongTo WHERE member_username = %s " \
+                "AND owner_username = %s)) ORDER BY postingdate DESC"
+        with conn.cursor() as cursor:
+            cursor.execute(query, (my_username, their_username, my_username, their_username))
+            query_result = cursor.fetchall()
+        for row in query_result:
+            filepath = row["filepath"]
+            photoBLOB = row["photoBLOB"]
+            with open(filepath, 'wb') as f:
+                f.write(photoBLOB)
+            # short-term fix for large data transfer
+            row["photoBLOB"] = 0
+        return render_template("view.html", photos=query_result)
+    else:
+        error = "Unknown error"
+        return render_template("search_by_user.html", error=error)
+
+
+@app.route("/follow_user")
+def follow_user():
+    return render_template("follow_user.html")
+
+
+@app.route("/follow_user_action", methods=["POST"])
+def follow_user_action():
+    their_username = formData["username_followed"]
+    if their_username:
+        my_username = session["username"]
+        query = "INSERT INTO Follow VALUES (%s, %s, %s)"
+        with conn.cursor() as cursor:
+            cursor.execute(query, (their_username, my_username, 0))
+            conn.commit()
+        return render_template("home.html")
+    else:
+        error = "Unknown error"
+        return render_template("follow_user.html", error=error)
+
+
+@app.route("/follow_requests")
+def follow_requests():
+    username = session["username"]
+    query = "SELECT username_follower FROM Follow WHERE username_followed = %s AND followstatus = 0"
+    with conn.cursor() as cursor:
+        cursor.execute(query, (username))
+        query_result = cursor.fetchall()
+    return render_template("follow_requests.html", requests=query_result)
+
+
+@app.route("/follow_requests_action", methods=["POST"])
+def follow_requests_action():
+    their_username = request.form.getlist("username_follower")
+    if their_username:
+        my_username = session["username"]
+        for tu in their_username:
+            query = "UPDATE Follow SET followstatus = 1 WHERE username_followed = %s AND username_follower = %s"
+            with conn.cursor() as cursor:
+                cursor.execute(query, (my_username, tu))
+                conn.commit()
+        return render_template("home.html")
+    else:
+        error = "Unknown error"
+        return render_template("follow_requests.html", error=error)
+
+
+@app.route("/add_comment", methods=["POST"])
+def add_comment():
+    formData = request.form
+    if formData:
+        username_commenter = session["username"]
+        photoID = formData["photoID"]
+        comment_text = formData["comment_text"]
+
+        query = "INSERT INTO Comment VALUES (%s, %s, %s)"
+        with conn.cursor() as cursor:
+            cursor.execute(query, (username_commenter, photoID, comment_text))
+            conn.commit()
+        return render_template("home.html")
+    else:
+        error = "Unknown error"
+        return render_template("home.html", error=error)
+
+
 if __name__ == "__main__":
     app.run('127.0.0.1', 5000, debug=True)
