@@ -303,13 +303,13 @@ def add_comment():
         photoID = formData["photoID"]
         comment_text = formData["comment_text"]
         query = "INSERT INTO Comment VALUES (%s, %s, %s)"
+        page_path = os.path.join("view_details/", photoID)
 
         try:
             with conn.cursor() as cursor:
                 cursor.execute(query, (username_commenter, photoID, comment_text))
                 conn.commit()
         except pymysql.IntegrityError:
-            page_path = os.path.join("view_details/", photoID)
             return redirect(page_path)
         return redirect(page_path)
     else:
