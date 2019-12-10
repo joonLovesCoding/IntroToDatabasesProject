@@ -6,8 +6,6 @@
 		<h1>Accept follow requests</h1>
 		<div>
 			<form action="/follow_requests_action" method="POST">
-				<input type="checkbox" name="username_follower" value=""> Blank
-				<br>
 			    {% for request in requests %}
 			        <input type="checkbox" name="username_follower" value={{request.username_follower}}> {{request.username_follower}}
 			        <br>
@@ -15,7 +13,10 @@
 			    <br>
 				<input type="submit" value="Submit">
 			</form>
-			<a href="/">Back to home</a>
 		</div>
+		<a href="/">Back to home</a>
+		{% if error %}
+            <p class="error"><strong>Error:</strong> {{error}}</p>
+        {% endif %}
 	</body>
 </html>

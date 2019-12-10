@@ -15,29 +15,55 @@
         	Poster: {{photo.photoPoster}} ({{photo.firstname}} {{photo.lastname}})
         	<br>
         	Posting date: {{photo.postingdate}}
-        	<br><br>
+        </div>
+        <br>
+        <div>
         	Comments:
         	<br>
         	{% for comment in comments %}
         		{{comment.username}}: {{comment.comment_text}}
         		<br>
         	{% endfor %}
-        	<br>
         	Tagged:
         	<br>
         	{% for tag in tags %}
         		{{tag.username}} ({{tag.firstname}} {{tag.lastname}})
         		<br>
         	{% endfor %}
+        	Likes:
         	<br>
+        	{% for like in likes %}
+        		{{like.username}}, {{like.rating}}/5
+        		<br>
+        	{% endfor %}
+        </div>
+        <br>
+        <div>
+        	<form action="/like_photo" method="POST">
+	        	<select name="rating">
+				    <option value="" selected="selected">No rating</option>
+				    <option value="1" selected="selected">1 star</option>
+				    <option value="2" selected="selected">2 stars</option>
+				    <option value="3" selected="selected">3 stars</option>
+				    <option value="4" selected="selected">4 stars</option>
+				    <option value="5" selected="selected">5 stars</option>
+				</select>
+			    <input type="submit" value="Like">
+			    <input class="hidden" type="radio" name="photoID" value={{photo.photoID}} checked/>
+        	</form>
+        </div>
+        <div>
         	<form action="/add_comment" method="POST">
         		<textarea name="comment_text" rows="5" cols="50" maxLength=100>Leave a comment (Max 100 characters)</textarea>
         		<br>
-        		<input class="hidden" type="radio" value={{photo.photoID}} checked/>
+        		<input class="hidden" type="radio" name="photoID" value={{photo.photoID}} checked/>
         		<br>
         		<input type="submit" value="Comment">
         	</form>
-        	<a href="/">Back to home</a>
         </div>
+        <a href="/">Back to home</a>
+		{% if error %}
+            <p class="error"><strong>Error:</strong> {{error}}</p>
+        {% endif %}
     </body>
 </html>

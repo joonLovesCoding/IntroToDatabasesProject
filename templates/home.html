@@ -14,9 +14,11 @@
 			<a href="/follow_user">Follow a user</a>
 			<br>
 			<a href="/follow_requests">Follow requests</a>
-			{% if error %}
-				<p class="error"><strong>Error:</strong> {{error}}</p>
-			{% endif %}
+			<br>
+			<a href="/add_friend_group">Create a friend group</a>
 		</div>
+		{% if error %}
+			<p class="error"><strong>Error:</strong> {{error}}</p>
+		{% endif %}
 	</body>
 </html>

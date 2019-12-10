@@ -5,20 +5,17 @@
     <body>
         <h1>View photos</h1>
         <div>
-        	<form action="/view_details" method="post">
-        		<input type="radio" name="photoID" value=""> Blank
+        	{% for photo in photos %}
+        		{{photo.photoID}}, {{photo.photoPoster}}:
         		<br>
-			    {% for photo in photos %}
-			    	<input type="radio" name="photoID" value={{photo.photoID}}> {{photo.photoID}}, {{photo.photoPoster}} <img src="/photo_view/{{photo.filepath}}" width=300>
-			    	<br>
-			    {% endfor %}
-			    <br>
-			    <input type="submit" value="View">
-			</form>
-			<a href="/">Back to home</a>
-			{% if error %}
-				<p class="error"><strong>Error:</strong> {{error}}</p>
-			{% endif %}
+        		<a href="/view_details/{{photo.photoID}}"><img src="/photo_view/{{photo.filepath}}" width=300></a>
+        		<br>
+			{% endfor %}
+			<br>
         </div>
+        <a href="/">Back to home</a>
+		{% if error %}
+			<p class="error"><strong>Error:</strong> {{error}}</p>
+		{% endif %}
     </body>
 </html>

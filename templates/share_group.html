@@ -4,27 +4,29 @@
 	</head>
 	<body>
 		<h1>Share to a friend group</h1>
-		<div>
-			<form action="/share_group" method="POST">
+		<form action="/share_group" method="POST">
+			<div>
 				Filepath: <input type="text" name="filepath" size=110 maxLength=100 value={{filepath}} required/>
-				<br><br>
-				Caption:
-				<br>
-				<textarea name="caption" rows="5" cols="50" maxLength=100>{{caption}}</textarea>
-				<br><br>
-				Share with:
-				<select name="Friendgroup">
-			        <option selected="selected">Choose one</option>
-			        {% for group in Friendgroups %}
-			        	<option>{{group.groupName}}</option>
-			        {% endfor %}
-			    <br>
-				<input type="submit" value="Submit">
-			</form>
-			<a href="/">Back to home</a>
-			{% if error %}
-				<p class="error"><strong>Error:</strong> {{error}}</p>
-			{% endif %}
-		</div>
+			</div>
+			<div>
+			Caption:
+			<br>
+			<textarea name="caption" rows="5" cols="50" maxLength=100>{{caption}}</textarea>
+			</div>
+			<div>
+			Share with:
+			<select name="Friendgroup">
+		        <option value="" selected="selected">Choose one</option>
+		        {% for group in Friendgroups %}
+		        	<option>{{group.groupName}}</option>
+		        {% endfor %}
+		    </select>
+		    </div>
+			<input type="submit" value="Submit">
+		</form>
+		<a href="/">Back to home</a>
+		{% if error %}
+			<p class="error"><strong>Error:</strong> {{error}}</p>
+		{% endif %}
 	</body>
 </html>

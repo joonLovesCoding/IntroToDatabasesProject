@@ -1,0 +1,23 @@
+<html>
+	<head>
+		<title>Finstagram</title>
+	</head>
+	<body>
+		<h1>Follow a user</h1>
+		<div>
+			<form action="/add_friend_group_action" method="post">
+				Name: <input type="text" name="groupName" required/>
+				<br>
+				Description:
+				<br>
+				<textarea name="description" rows="20" cols="50" maxLength=1000>Caption (max length 1000 characters)</textarea>
+				<br>
+				<input type="submit" value="Create">
+	        </form>
+    	</div>
+        <a href="/">Back to home</a>
+		{% if error %}
+            <p class="error"><strong>Error:</strong> {{error}}</p>
+        {% endif %}
+	</body>
+</html>

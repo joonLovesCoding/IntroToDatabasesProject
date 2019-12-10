@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, send_file
+from flask import Flask, render_template, request, session, send_file, redirect
 from datetime import datetime
 import pymysql.cursors
 import os.path
@@ -111,7 +111,7 @@ def share_action():
                         "VALUES (%s, %s, %s, %s, %s, %s)"
                 cursor.execute(query, (postingdate, filepath, allFollowers, caption, photoPoster, img_data))
                 conn.commit()
-            return render_template("share.html")
+            return render_template("home.html")
         else:
             with conn.cursor() as cursor:
                 query = "SELECT groupName FROM Friendgroup WHERE groupOwner = %s"
@@ -125,8 +125,8 @@ def share_action():
 
 @app.route("/share_group", methods=["POST"])
 def post_action_group():
-    formData = request.form
-    if formData:
+    if request.form:
+        formData = request.form
         postingdate = datetime.now()
         filepath = formData["filepath"]
         allFollowers = 0
@@ -182,30 +182,31 @@ def photo_view(filename):
         return send_file(filename, mimetype="image/jpg")
 
 
-@app.route("/view_details", methods=["POST"])
-def view_details():
-    photoID = request.form["photoID"]
-    if photoID:
-        query = "SELECT photoID, postingdate, filepath, photoPoster, firstname, lastname FROM (Photo JOIN Person ON " \
-                "(Photo.photoPoster = Person.username)) WHERE photoID = %s"
-        with conn.cursor() as cursor:
-            cursor.execute(query, photoID)
-            query_result = cursor.fetchone()
-            query = "SELECT username, comment_text FROM Comment WHERE photoID = %s"
-            cursor.execute(query, photoID)
-            query_result1 = cursor.fetchall()
-            query = "SELECT username, firstname, lastname FROM Tagged NATURAL JOIN Person where photoID = %s " \
-                    "AND tagstatus = 1"
-            cursor.execute(query, photoID)
-            query_result2 = cursor.fetchall()
-        if not query_result1:
-            query_result1 = [{"username": "N/A", "comment_text": "N/A"}]
-        if not query_result2:
-            query_result2 = [{"username": "N/A", "firstname": "N/A", "lastname": "N/A"}]
-        return render_template("view_details.html", photo=query_result, comments=query_result1, tags=query_result2)
-    else:
-        error = "Unknown error"
-        return render_template("home.html", error=error)
+@app.route("/view_details/<photoID>", methods=["GET"])
+def view_details(photoID):
+    query = "SELECT photoID, postingdate, filepath, photoPoster, firstname, lastname FROM (Photo JOIN Person ON " \
+            "(Photo.photoPoster = Person.username)) WHERE photoID = %s"
+    with conn.cursor() as cursor:
+        cursor.execute(query, photoID)
+        query_result = cursor.fetchone()
+        query = "SELECT username, comment_text FROM Comment WHERE photoID = %s"
+        cursor.execute(query, photoID)
+        query_result1 = cursor.fetchall()
+        query = "SELECT username, firstname, lastname FROM Tagged NATURAL JOIN Person WHERE photoID = %s " \
+                "AND tagstatus = 1"
+        cursor.execute(query, photoID)
+        query_result2 = cursor.fetchall()
+        query = "SELECT username, rating FROM Likes WHERE photoID = %s"
+        cursor.execute(query, photoID)
+        query_result3 = cursor.fetchall()
+    if not query_result1:
+        query_result1 = [{"username": "N/A", "comment_text": "N/A"}]
+    if not query_result2:
+        query_result2 = [{"username": "N/A", "firstname": "N/A", "lastname": "N/A"}]
+    if not query_result3:
+        query_result3 = [{"username": "N/A", "rating": "N/A"}]
+    return render_template("view_details.html", photo=query_result, comments=query_result1, tags=query_result2,
+                           likes=query_result3)
 
 
 @app.route("/search_by_user")
@@ -215,8 +216,8 @@ def search_by_user():
 
 @app.route("/search_by_user_action", methods=["POST"])
 def search_by_user_action():
-    their_username = request.form["username"]
-    if their_username:
+    if request.form:
+        their_username = request.form["username"]
         my_username = session["username"]
         query = "(SELECT photoID, postingdate, filepath, photoPoster, photoBLOB FROM Photo WHERE allFollowers = 1 " \
                 "AND photoPoster IN (SELECT username_followed FROM Follow WHERE username_follower = %s " \
@@ -224,6 +225,7 @@ def search_by_user_action():
                 "(SELECT photoID, postingdate, filepath, photoPoster, photoBLOB FROM SharedWith NATURAL JOIN Photo " \
                 "WHERE groupName IN (SELECT groupName FROM BelongTo WHERE member_username = %s " \
                 "AND owner_username = %s)) ORDER BY postingdate DESC"
+
         with conn.cursor() as cursor:
             cursor.execute(query, (my_username, their_username, my_username, their_username))
             query_result = cursor.fetchall()
@@ -247,13 +249,19 @@ def follow_user():
 
 @app.route("/follow_user_action", methods=["POST"])
 def follow_user_action():
-    their_username = formData["username_followed"]
-    if their_username:
+    if request.form:
+        formData = request.form
+        their_username = formData["username_followed"]
         my_username = session["username"]
         query = "INSERT INTO Follow VALUES (%s, %s, %s)"
-        with conn.cursor() as cursor:
-            cursor.execute(query, (their_username, my_username, 0))
-            conn.commit()
+
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (their_username, my_username, 0))
+                conn.commit()
+        except pymysql.IntegrityError:
+            error = "You have already sent this user a follow request."
+            return render_template("follow_user.html", error=error)
         return render_template("home.html")
     else:
         error = "Unknown error"
@@ -264,6 +272,7 @@ def follow_user_action():
 def follow_requests():
     username = session["username"]
     query = "SELECT username_follower FROM Follow WHERE username_followed = %s AND followstatus = 0"
+
     with conn.cursor() as cursor:
         cursor.execute(query, (username))
         query_result = cursor.fetchall()
@@ -288,20 +297,73 @@ def follow_requests_action():
 
 @app.route("/add_comment", methods=["POST"])
 def add_comment():
-    formData = request.form
-    if formData:
+    if request.form:
+        formData = request.form
         username_commenter = session["username"]
         photoID = formData["photoID"]
         comment_text = formData["comment_text"]
-
         query = "INSERT INTO Comment VALUES (%s, %s, %s)"
-        with conn.cursor() as cursor:
-            cursor.execute(query, (username_commenter, photoID, comment_text))
-            conn.commit()
-        return render_template("home.html")
+
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (username_commenter, photoID, comment_text))
+                conn.commit()
+        except pymysql.IntegrityError:
+            page_path = os.path.join("view_details/", photoID)
+            return redirect(page_path)
+        return redirect(page_path)
     else:
         error = "Unknown error"
         return render_template("home.html", error=error)
+
+
+@app.route("/like_photo", methods=["POST"])
+def like_photo():
+    if request.form:
+        username = session["username"]
+        photoID = request.form["photoID"]
+        liketime = datetime.now()
+        rating = int(request.form["rating"])
+        query = "INSERT INTO Likes VALUES (%s, %s, %s, %s)"
+
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (username, photoID, liketime, rating))
+                conn.commit()
+        except pymysql.err.IntegrityError:
+            page_path = os.path.join("view_details/", photoID)
+            return redirect(page_path)
+        page_path = os.path.join("view_details/", photoID)
+        return redirect(page_path)
+    else:
+        error = "Unknown error"
+        return render_template("home.html", error=error)
+
+
+@app.route("/add_friend_group")
+def add_friend_group():
+    return render_template("add_friend_group.html")
+
+
+@app.route("/add_friend_group_action", methods=["POST"])
+def add_friend_group_action():
+    if request.form:
+        groupOwner = session["username"]
+        groupName = request.form["groupName"]
+        description = request.form["description"]
+        query = "INSERT INTO Friendgroup VALUES (%s, %s, %s)"
+
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (groupOwner, groupName, description))
+                conn.commit()
+        except pymysql.err.IntegrityError:
+            error = "You have already created a friend group with that name."
+            return render_template("add_friend_group.html", error=error)
+        return render_template("home.html")
+    else:
+        error = "Unknown error"
+        return render_template("add_friend_group.html", error=error)
 
 
 if __name__ == "__main__":
